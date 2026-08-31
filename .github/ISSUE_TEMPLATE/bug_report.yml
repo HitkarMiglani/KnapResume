@@ -1,0 +1,25 @@
+name: Bug report
+description: Report a defect in KnapResume
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug and which pipeline stage it affects (see docs/ARCHITECTURE.md).
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+  - type: input
+    id: env
+    attributes:
+      label: Environment (OS, branch/commit)

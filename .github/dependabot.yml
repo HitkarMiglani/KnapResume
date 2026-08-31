@@ -1,0 +1,11 @@
+version: 2
+updates:
+  # Add an entry per package ecosystem once the stack is chosen, e.g.:
+  # - package-ecosystem: "npm"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

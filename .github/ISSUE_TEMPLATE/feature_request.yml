@@ -1,0 +1,22 @@
+name: Feature request
+description: Propose a new capability or pipeline improvement for KnapResume
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What's missing or painful today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Which pipeline stage(s) does this touch (see docs/ARCHITECTURE.md)?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

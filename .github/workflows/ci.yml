@@ -1,0 +1,28 @@
+name: CI
+
+# Placeholder pipeline until the tech stack is chosen (see docs/adr/).
+# Replace the "build" job with real install/lint/test/build steps for the chosen stack.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  sanity-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail on unresolved merge conflict markers
+        run: |
+          if grep -RIn --exclude-dir=.git -E '^(<<<<<<<|=======|>>>>>>>)' .; then
+            echo "Merge conflict markers found."
+            exit 1
+          fi
+
+      # Status freshness is a human review requirement until stack-specific CI exists.
+      - name: Non-enforcing reminder to keep docs/STATUS.md fresh
+        run: |
+          echo "Reviewer must confirm docs/STATUS.md is updated when phase or next steps change."
