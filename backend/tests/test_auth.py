@@ -43,15 +43,19 @@ def test_account_deletion_revokes_session(registered_client):
     registered_client.post(
         "/api/bullets", json={"section": "skill", "raw_text": "Python"}
     )
+    registered_client.post(
+        "/api/job-descriptions", json={"raw_text": "Senior Python engineer, 5+ years"}
+    )
 
     resp = registered_client.delete("/api/auth/account")
     assert resp.status_code == 204
     resp = registered_client.get("/api/auth/session")
     assert resp.status_code == 401
 
-    from app.models import Bullet, SourceFact
+    from app.models import Bullet, JobDescription, SourceFact
     from tests.conftest import TestSessionLocal
 
     with TestSessionLocal() as db:
         assert db.query(Bullet).count() == 0
         assert db.query(SourceFact).count() == 0
+        assert db.query(JobDescription).count() == 0

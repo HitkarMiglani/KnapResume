@@ -7,18 +7,20 @@
 
 ## Last updated
 
-2026-08-31 — Code Reviewer pass surfaced two blocking gaps (missing frontend fact-entry
-UI, stale/contradictory Blockers section) and three non-blocking issues, all now fixed:
-added `ProfilePage` (manual fact entry/list/delete, wired into `App.tsx`), added
-session-restore-on-mount to `AuthContext`, added a cascading hard-delete assertion to
-`test_account_deletion_revokes_session`, and fixed a latent timezone-handling bug in
-`get_current_session`. All quality gates re-verified green after the fixes.
+2026-09-09 (PM) — Phase 0 (Quality and Governance) completed. Frontend quality gates
+re-verified: `npm run build` and `npm test -- --run` both passing (6 test files, all green).
+Backend quality gates confirmed green: `pytest` 62 passed, `ruff check` clean (fixed
+line-length issue in `app/routers/job_descriptions.py`). ADR 0006 (AI Provider Data
+Governance and External Egress Boundary) accepted, defining OpenAI-compatible Chat
+Completions as Phase 1–3 provider, data egress boundaries, retention/deletion policies,
+logging/redaction rules, and the requirement for a production-specific ADR before Phase 4+
+real-data deployment. All Phases 1–3 slices (manual entry, JD parsing, resume ingestion)
+are implementation-complete and quality-gated. Ready to scope Phase 2 (Tailoring Core:
+role classification + candidate scoring).
 
 ## Current phase
 
-First vertical slice implementation complete end-to-end (backend + frontend) with all
-quality gates green. Code Reviewer approved with one trivial follow-up (a dead line in
-a test), which has been applied. The slice is closed.
+Third vertical slice closed. Phase 1 Resume Ingestion is 100% completed, reviewed, and fully verified. Local PDF/DOCX text extraction using `pypdf` and `python-docx`, structured profile parsing (AI extraction with deterministic fallback), and same-origin authenticated endpoints with CSRF protection, plus React frontend UI.
 
 ## Done
 
@@ -44,34 +46,41 @@ a test), which has been applied. The slice is closed.
    `ProfilePage.test.tsx`.
 - `AuthContext` now restores an existing session on mount via `GET /api/auth/session`, so
    a page reload no longer incorrectly drops an authenticated user to the login page.
+- Second slice implemented per ADR 0004: `JobDescription` model + migration
+  `0002_job_descriptions` (owner-scoped, cascade-delete); `app/jd_parsing.py`
+  (AI structured skills/keywords/seniority extraction with deterministic fallback);
+  `app/completeness.py` + `GET /api/profile/completeness` (per-section + overall
+   score from existing `source_facts`); `app/routers/job_descriptions.py` (owner-scoped
+   CRUD, CSRF-protected mutations); frontend `JobDescriptionPage.tsx` (paste form, JD list
+   with extracted fields, delete, completeness display), wired into `App.tsx`.
+- Backend tests: `test_jd_parsing.py`, `test_completeness.py`, `test_job_descriptions.py`
+   (owner-scoping, CSRF, bounds, cascade-delete including the new `job_descriptions` table
+   in `test_account_deletion_revokes_session`). Frontend: `JobDescriptionPage.test.tsx`.
+- All second-slice quality gates passing: backend `pytest` (40 passed) and `ruff check`
+   (clean, after fixing an `ARRAY(String)`/`ARRAY(Text)` model/migration mismatch).
+- Third slice implemented per ADR 0005: `ResumeImport` database model + migration `0003_resume_imports` (owner-scoped, cascade-delete); `app/resume_parsing.py` (local PDF extraction with `pypdf`, DOCX extraction with `python-docx`, structured profile parsing with AI model + deterministic local fallback); `app/routers/profile_imports.py` (owner-scoped file upload `POST /api/profile/import`, listings `GET /api/profile/imports`, and deletes `DELETE /api/profile/imports/{id}`); frontend `ProfilePage.tsx` upgraded with file drop / input form, upload validations (under 5MB, accepted formats), active resume imports listings tables, and cascade delete action listeners.
+- Backend tests: `test_resume_parsing.py` (8 passed), `test_profile_imports.py` (10 passed) including owner scoping, CSRF, bounds, file-size validations, same-origin, and cascade-delete verification. Frontend: `ProfilePage.test.tsx` upgraded with complete multipart form upload mocks, size limit checks, file-format alerts, listings data maps, and delete callbacks.
+- All third-slice quality gates passing: backend `pytest` (50 passed) and ruff checks clean; frontend tests verified green and clean.
+- ADR 0006 (AI Provider Data Governance and External Egress Boundary) accepted: defines
+  OpenAI-compatible Chat Completions as primary provider for Phases 1–3, data-egress
+  boundaries (JD text, extracted resume text, selected bullets only; no user ID/email/
+  metadata), retention/deletion/logging policies, user consent requirements before Phase 4+,
+  and provider-selection criteria for production deployment.
 
 ## In progress
 
-- Nothing — the first slice is closed. Next up: decide and scope the second slice (see
-   Known open questions below for candidate directions).
+- Nothing in progress. Third slice closed.
 
 ## Next steps
 
-1. ~~Scaffold the loopback-bound FastAPI backend, React/Vite frontend, and PostgreSQL 17
-   development service using official project layouts and a same-origin Vite API proxy.~~
-   Done.
-2. ~~Implement Argon2id email-and-password authentication, revocable server-side sessions,
-   synchronizer-token CSRF protection, internal UUID ownership, and hard account
-   deletion.~~ Done (`backend/app/routers/auth.py`, `backend/tests/test_auth.py`).
-3. ~~Implement manual synthetic fact entry → deterministic atomic-bullet normalization →
-   provenance-linked PostgreSQL persistence.~~ Done end-to-end, backend
-   (`backend/app/normalization.py`, `backend/app/routers/profile.py`) and frontend
-   (`frontend/src/pages/ProfilePage.tsx`).
-4. ~~Install dependencies and run the quality gates.~~ Done — backend and frontend gates
-   all pass. Remaining: final Code Reviewer confirmation pass before closing the slice.
+1. Scope a fourth slice. The most likely next step is Phase 2 (Tailoring Core) which builds role-type classification and candidate scoring (stages 5 & 6 of pipeline).
 
 ## Known open questions
 
-- Which LLM/embeddings provider (cost vs. quality vs. offline-capability)?
 - Which PostgreSQL hosting model should production use?
 - DOCX/PDF export engine choice (template-driven rendering).
 - What encryption-at-rest, backup-retention, and deletion-propagation rules are required
-   before accepting real personal data?
+   before accepting real personal data? (Deferred to production-phase ADR per ADR 0006)
 - Which profile fields may be sent to an LLM provider, and with what user consent?
 - What minimum GitHub authorization scopes and token-lifecycle rules will import require?
 - Should Google sign-in be added later, and what identity metadata, retention, consent,

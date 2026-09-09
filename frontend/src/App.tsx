@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { JobDescriptionPage } from "./pages/JobDescriptionPage";
 
 function AuthenticatedApp() {
   const { session, loading, logout } = useAuth();
@@ -27,6 +28,7 @@ function AuthenticatedApp() {
         Log out
       </button>
       <ProfilePage />
+      <JobDescriptionPage />
     </div>
   );
 }

@@ -108,6 +108,6 @@ def delete_account(
     user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
 ):
-    db.delete(user)  # cascades to sessions, source_facts, bullets
+    db.delete(user)  # cascades to sessions, source_facts, bullets, job_descriptions
     db.commit()
     response.delete_cookie(SESSION_COOKIE_NAME, path="/")

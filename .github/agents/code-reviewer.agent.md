@@ -17,8 +17,10 @@ findings for the executor (Backend/Frontend Developer) or Architect to act on.
 - ONLY review that change-set — don't review unrelated existing code.
 - Check specifically for: architecture drift from `docs/ARCHITECTURE.md`/ADRs,
   over-engineering (see `.github/copilot-instructions.md` → "Prevent over-engineering"),
-  non-standard project structure, and provenance/verification metadata being dropped or
-  defaulted silently.
+  non-standard project structure, provenance/verification metadata being dropped or
+  defaulted silently (see `.github/instructions/provenance-and-rewriting.instructions.md`),
+  privacy/PII logging leaks (see `.github/instructions/privacy-and-ai-boundary.instructions.md`),
+  and ensuring that any database edits are matched with proper cascade-delete test assertions.
 - Cite concrete evidence (file + line) for every finding; no speculation.
 
 ## Approach

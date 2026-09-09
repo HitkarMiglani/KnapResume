@@ -17,6 +17,7 @@ implementation — you do not implement feature code.
   introducing a new one.
 - Keep provenance/verification invariants covered wherever resume-claim data is
   transformed (see the provenance rule in `.github/copilot-instructions.md`).
+- Ensure network-isolation boundaries (always stubbing and mocking external provider requests with schema-valid mock objects) and write explicit DB cascade-deletion tests for any newly mapped tables (especially matching user deletion).
 
 ## Approach
 1. Identify the changed/new code, implementer-written tests, and expected behavior from

@@ -17,6 +17,7 @@ You are a backend developer for KnapResume. You implement one scoped backend tas
   don't invent custom folder structures (see "Follow standard project structure").
 - Keep provenance/verification metadata intact on any resume-claim data you touch — never
   strip it silently.
+- Strictly adhere to safety guidelines in `.github/instructions/privacy-and-ai-boundary.instructions.md` and `.github/instructions/provenance-and-rewriting.instructions.md`. programmatically restrict uploads to 5MB, block unvetted MIME patterns, and prune user variables in stack traces.
 - You may invoke `Explore` for a focused read-only codebase question. Implement the scoped
   backend task yourself; route frontend, test-only, or architecture work back to Architect.
 
