@@ -33,7 +33,7 @@ From the repository root:
 docker compose up -d db
 ```
 
-The database is available at `127.0.0.1:5432` with the default credentials defined in
+The database is available at `127.0.0.1:    ` with the default credentials defined in
 `docker-compose.yml`.
 
 ### 2. Configure and prepare the backend
@@ -113,16 +113,30 @@ PostgreSQL volume and all stored development data.
 
 ## System Architecture & Flow
 
+After login, KnapResume follows a profile-first flow:
+
+1. **Build user data** — import a PDF/DOCX resume or enter profile facts manually. This is the
+   shared source of truth for the account.
+2. **Create a resume session** — add a target job description. A session is created for that JD.
+3. **Build the session resume** — upload a separate resume for the session and tailor it using the
+   shared profile data.
+4. **Return to any session** — users can maintain multiple JD/resume sessions independently.
+
+Shared profile bullets are user-owned. Job descriptions and resume imports may additionally be
+linked to a `ResumeWorkspace`, keeping each target resume isolated from other sessions.
+
 ```mermaid
 flowchart TD
     UI[React + TypeScript UI] --> API[FastAPI API]
     API --> AUTH[Authentication and Authorization]
     API --> PROFILE[Profile Service / Resume Ingest]
     API --> JD[JD Processing Service]
+    API --> WORKSPACE[Resume Session Service]
     API --> TAILOR[Tailoring Orchestrator]
 
     PROFILE --> DB[(PostgreSQL 17)]
     JD --> DB
+    WORKSPACE --> DB
     TAILOR --> DB
 
     JD --> LLM[OpenAI-compatible AI Provider]
@@ -139,6 +153,13 @@ flowchart TD
 - State-preserving authenticated server-side cookie sessions.
 - Comprehensive synchronizer-token **CSRF protection** on all state-changing endpoints.
 
+### 1A. Profile-First Onboarding and Resume Sessions
+- Authenticated users start by building shared profile data.
+- Profile data can come from manual facts or PDF/DOCX resume parsing.
+- Each target job description starts a separate resume workspace/session.
+- Session resume imports are isolated per workspace, while shared profile facts can be reused.
+- Users can return to multiple independent JD/resume sessions.
+
 ### 2. Manual & Automated Profile Acquisition
 - **Manual Intake**: Interactive fact insertion with strict single-line NFC normalization (`normalize_fact`), checking for max bounds and stripping leading bullet symbols deterministically.
 - **Resume Ingest (Phase 1)**: Robust PDF and Word Document (`.docx`) file upload processing (synchronous, in-memory parsing, max 5MB constraint).
@@ -149,6 +170,7 @@ flowchart TD
 - Plain-text paste input interface for target JDs.
 - Structured AI extraction to yield core technical `skills`, semantic `keywords`, and title `seniority` signals (with localized deterministic regex/years-of-experience fallback).
 - Owner-scoped CRUD persistence so users can manage active job descriptions.
+- New job descriptions can create a dedicated resume workspace.
 
 ### 4. Real-time Profile Completeness Scoring
 - Computes profile completeness dynamically. Evaluates subsection data ratios against target constants to produce metrics on a `0.0` to `1.0` scale, combined with an aggregate score.
@@ -161,7 +183,7 @@ flowchart TD
 
 ## Current Status & Roadmap
 
-### [Unreleased] — Completed Slice 3
+### [Unreleased] — Profile-First Sessions
 
 The **Third Vertical Slice (Phase 1: Resume Ingestion)** is **100% complete and verified**:
 - Added pure-python binary extraction filters.
@@ -170,6 +192,9 @@ The **Third Vertical Slice (Phase 1: Resume Ingestion)** is **100% complete and 
 - Multi-part file upload support integrated into the `apiFetch` helper.
 - Upgraded the frontend `ProfilePage` with drag-and-drop file forms, uploaded documents list tables, and live data refreshes.
 - Validated with complete unit, integration, mock-network, and cascade tests.
+- Reworked the authenticated flow so profile acquisition is the first step after login.
+- Added workspace/session persistence and workspace-scoped resume imports for multiple target
+  resumes.
 
 ### Project Verification Status
 - **Backend Quality**: 50/50 test specs passed under `pytest` with clean `ruff` lints.
@@ -179,6 +204,6 @@ The **Third Vertical Slice (Phase 1: Resume Ingestion)** is **100% complete and 
 
 ## Next Steps
 
-1. **Phase 2 (Tailoring Core)**: Create role-type classification schema rules and implement initial candidate semantic bullet scoring.
+1. **Phase 2 (Tailoring Core)**: Create role-type classification schema rules and implement initial candidate semantic bullet scoring inside each resume session.
 2. **Phase 3 (Optimization Core)**: Formulate the mathematical 0/1 Knapsack optimization algorithm to enforce absolute page line boundaries dynamically.
 3. **Phase 4 (Grounded Re-writing)**: Implement metric verification and visual accuracy flags.

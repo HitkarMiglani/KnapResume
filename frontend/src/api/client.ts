@@ -13,6 +13,7 @@ export type ResumeImport = {
   file_type: string;
   status: string;
   created_at: string;
+  workspace_id?: string | null;
 };
 
 export type ResumeImportDetail = {
@@ -31,6 +32,14 @@ export type JobDescription = {
   keywords: string[];
   seniority: string | null;
   created_at: string;
+  workspace_id?: string | null;
+};
+
+export type Workspace = {
+  id: string;
+  name: string;
+  created_at: string;
+  job_description: JobDescription | null;
 };
 
 export type CompletenessScore = {
@@ -51,6 +60,7 @@ export type SessionInfo = {
 };
 
 const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+const CSRF_EXEMPT_PATHS = new Set(["/api/auth/login", "/api/auth/register"]);
 
 export class ApiError extends Error {
   status: number;
@@ -72,7 +82,7 @@ export async function apiFetch<T>(
     headers["Content-Type"] = "application/json";
   }
 
-  if (STATE_CHANGING_METHODS.has(method)) {
+  if (STATE_CHANGING_METHODS.has(method) && !CSRF_EXEMPT_PATHS.has(path)) {
     if (!options.csrfToken) {
       throw new ApiError(0, "missing CSRF token for state-changing request");
     }

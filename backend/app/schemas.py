@@ -39,6 +39,7 @@ class BulletResponse(BaseModel):
 
 class JobDescriptionCreateRequest(BaseModel):
     raw_text: str = Field(min_length=1, max_length=20000)
+    workspace_id: uuid.UUID | None = None
 
 
 class JobDescriptionResponse(BaseModel):
@@ -48,6 +49,7 @@ class JobDescriptionResponse(BaseModel):
     keywords: list[str]
     seniority: str | None
     created_at: datetime
+    workspace_id: uuid.UUID | None = None
 
     model_config = {"from_attributes": True}
 
@@ -67,6 +69,7 @@ class ResumeImportResponse(BaseModel):
     file_type: str
     status: str
     created_at: datetime
+    workspace_id: uuid.UUID | None = None
 
     model_config = {"from_attributes": True}
 
@@ -78,5 +81,15 @@ class ResumeImportDetailResponse(BaseModel):
     status: str
     created_at: datetime
     bullets: list[BulletResponse]
+    workspace_id: uuid.UUID | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class WorkspaceResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    created_at: datetime
+    job_description: JobDescriptionResponse | None = None
 
     model_config = {"from_attributes": True}

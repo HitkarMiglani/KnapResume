@@ -1,11 +1,11 @@
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session as DbSession
 
 from app.database import get_db
 from app.dependencies import get_current_user, require_csrf
-from app.models import Bullet, ResumeImport, SourceFact, User
+from app.models import Bullet, ResumeImport, ResumeWorkspace, SourceFact, User
 from app.normalization import normalize_fact
 from app.resume_parsing import extract_text, parse_resume
 from app.schemas import ResumeImportDetailResponse, ResumeImportResponse
@@ -21,9 +21,19 @@ router = APIRouter(prefix="/api/profile", tags=["profile"])
 )
 def import_profile(
     file: UploadFile = File(...),
+    workspace_id: uuid.UUID | None = Query(default=None),
     user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
 ):
+    workspace = None
+    if workspace_id is not None:
+        workspace = (
+            db.query(ResumeWorkspace)
+            .filter(ResumeWorkspace.id == workspace_id, ResumeWorkspace.user_id == user.id)
+            .first()
+        )
+        if workspace is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "workspace not found")
     # 1. Read content
     content = file.file.read()
 
@@ -56,6 +66,7 @@ def import_profile(
     file_type = "pdf" if is_pdf else "docx"
     import_obj = ResumeImport(
         user_id=user.id,
+        workspace_id=workspace_id,
         filename=filename,
         file_type=file_type,
         status="processing",
@@ -118,12 +129,15 @@ def import_profile(
 
 @router.get("/imports", response_model=list[ResumeImportResponse])
 def list_imports(
+    workspace_id: uuid.UUID | None = Query(default=None),
     user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
 ):
+    query = db.query(ResumeImport).filter(ResumeImport.user_id == user.id)
+    if workspace_id is not None:
+        query = query.filter(ResumeImport.workspace_id == workspace_id)
     return (
-        db.query(ResumeImport)
-        .filter(ResumeImport.user_id == user.id)
+        query
         .order_by(ResumeImport.created_at.desc())
         .all()
     )

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError, apiFetch, type CompletenessScore, type JobDescription } from "../api/client";
 
-export function JobDescriptionPage() {
+export function JobDescriptionPage({ workspaceId, onCreated }: { workspaceId?: string; onCreated?: () => void }) {
   const { session } = useAuth();
   const [jobDescriptions, setJobDescriptions] = useState<JobDescription[]>([]);
   const [completeness, setCompleteness] = useState<CompletenessScore | null>(null);
@@ -11,7 +11,11 @@ export function JobDescriptionPage() {
 
   async function refresh() {
     const [jds, score] = await Promise.all([
-      apiFetch<JobDescription[]>("/api/job-descriptions"),
+      workspaceId
+        ? apiFetch<{ job_description: JobDescription | null }>(`/api/workspaces/${workspaceId}`).then(
+            (workspace) => (workspace.job_description ? [workspace.job_description] : []),
+          )
+        : apiFetch<JobDescription[]>("/api/job-descriptions"),
       apiFetch<CompletenessScore>("/api/profile/completeness"),
     ]);
     setJobDescriptions(jds);
@@ -20,7 +24,7 @@ export function JobDescriptionPage() {
 
   useEffect(() => {
     void refresh();
-  }, []);
+  }, [workspaceId]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -28,11 +32,12 @@ export function JobDescriptionPage() {
     try {
       await apiFetch<JobDescription>("/api/job-descriptions", {
         method: "POST",
-        body: { raw_text: rawText },
+        body: { raw_text: rawText, ...(workspaceId ? { workspace_id: workspaceId } : {}) },
         csrfToken: session?.csrf_token,
       });
       setRawText("");
       await refresh();
+      onCreated?.();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "could not add job description");
     }
@@ -52,7 +57,8 @@ export function JobDescriptionPage() {
 
   return (
     <div>
-      <h2>Job descriptions</h2>
+      <h2>{workspaceId ? "Target job" : "Job descriptions"}</h2>
+      {!workspaceId && <p>Step 2: create a session from a job description, then attach its separate resume.</p>}
       <form onSubmit={handleSubmit}>
         <label htmlFor="jd_raw_text">Job description</label>
         <textarea

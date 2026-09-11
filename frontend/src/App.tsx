@@ -3,11 +3,12 @@ import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { ProfilePage } from "./pages/ProfilePage";
-import { JobDescriptionPage } from "./pages/JobDescriptionPage";
+import { WorkspacePage } from "./pages/WorkspacePage";
 
 function AuthenticatedApp() {
   const { session, loading, logout } = useAuth();
   const [view, setView] = useState<"login" | "register">("login");
+  const [step, setStep] = useState<"profile" | "sessions">("profile");
 
   if (loading) {
     return <p>Loading…</p>;
@@ -27,8 +28,7 @@ function AuthenticatedApp() {
       <button type="button" onClick={() => void logout()}>
         Log out
       </button>
-      <ProfilePage />
-      <JobDescriptionPage />
+      {step === "profile" ? <ProfilePage onComplete={() => setStep("sessions")} /> : <WorkspacePage />}
     </div>
   );
 }

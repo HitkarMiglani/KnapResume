@@ -7,8 +7,13 @@ from app.completeness import compute_completeness
 from app.database import get_db
 from app.dependencies import get_current_user, require_csrf
 from app.jd_parsing import AIParsingError, parse_job_description
-from app.models import JobDescription, User
-from app.schemas import CompletenessResponse, JobDescriptionCreateRequest, JobDescriptionResponse
+from app.models import JobDescription, ResumeWorkspace, User
+from app.schemas import (
+    CompletenessResponse,
+    JobDescriptionCreateRequest,
+    JobDescriptionResponse,
+    WorkspaceResponse,
+)
 
 router = APIRouter(prefix="/api", tags=["job-descriptions"])
 
@@ -39,11 +44,52 @@ def create_job_description(
         keywords=keywords,
         seniority=seniority,
     )
+    if body.workspace_id is not None:
+        workspace = (
+            db.query(ResumeWorkspace)
+            .filter(ResumeWorkspace.id == body.workspace_id, ResumeWorkspace.user_id == user.id)
+            .first()
+        )
+        if workspace is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "workspace not found")
+    else:
+        workspace = ResumeWorkspace(
+            user_id=user.id, name=body.raw_text[:80].strip() or "Untitled session"
+        )
+        db.add(workspace)
+        db.flush()
+    jd.workspace_id = workspace.id
     db.add(jd)
     db.commit()
     db.refresh(jd)
 
     return jd
+
+
+@router.get("/workspaces", response_model=list[WorkspaceResponse])
+def list_workspaces(user: User = Depends(get_current_user), db: DbSession = Depends(get_db)):
+    return (
+        db.query(ResumeWorkspace)
+        .filter(ResumeWorkspace.user_id == user.id)
+        .order_by(ResumeWorkspace.created_at.desc())
+        .all()
+    )
+
+
+@router.get("/workspaces/{workspace_id}", response_model=WorkspaceResponse)
+def get_workspace(
+    workspace_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+):
+    workspace = (
+        db.query(ResumeWorkspace)
+        .filter(ResumeWorkspace.id == workspace_id, ResumeWorkspace.user_id == user.id)
+        .first()
+    )
+    if workspace is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "workspace not found")
+    return workspace
 
 
 @router.get("/job-descriptions", response_model=list[JobDescriptionResponse])

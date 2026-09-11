@@ -20,6 +20,10 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(nullable=False)
     created_at: Mapped[datetime] = mapped_column(server_default=text("now()"))
 
+    workspaces: Mapped[list["ResumeWorkspace"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
 
 class Session(Base):
     __tablename__ = "sessions"
@@ -45,6 +49,9 @@ class ResumeImport(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("resume_workspaces.id", ondelete="CASCADE"), nullable=True
+    )
     filename: Mapped[str] = mapped_column(nullable=False)
     file_type: Mapped[str] = mapped_column(nullable=False)
     status: Mapped[str] = mapped_column(nullable=False, server_default=text("'processing'"))
@@ -53,6 +60,7 @@ class ResumeImport(Base):
     source_facts: Mapped[list["SourceFact"]] = relationship(
         back_populates="resume_import", cascade="all, delete-orphan"
     )
+    workspace: Mapped["ResumeWorkspace | None"] = relationship(back_populates="imports")
 
     @property
     def bullets(self) -> list["Bullet"]:
@@ -120,8 +128,33 @@ class JobDescription(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("resume_workspaces.id", ondelete="CASCADE"), nullable=True
+    )
     raw_text: Mapped[str] = mapped_column(nullable=False)
     skills: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
     keywords: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
     seniority: Mapped[str | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=text("now()"))
+    workspace: Mapped["ResumeWorkspace | None"] = relationship(back_populates="job_description")
+
+
+class ResumeWorkspace(Base):
+    __tablename__ = "resume_workspaces"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(server_default=text("now()"))
+
+    user: Mapped[User] = relationship(back_populates="workspaces")
+    job_description: Mapped["JobDescription | None"] = relationship(
+        back_populates="workspace", uselist=False
+    )
+    imports: Mapped[list[ResumeImport]] = relationship(
+        back_populates="workspace", cascade="all, delete-orphan"
+    )

@@ -12,9 +12,22 @@ Completed:
 - Job-description paste input with AI-backed structured parsing and deterministic fallback.
 - Owner-scoped job-description persistence and deletion.
 - Profile completeness scoring by section.
+- Profile-first onboarding flow after authentication.
+- Resume workspaces/sessions: each session can own one JD and its separate resume import while
+  reusing the user's shared profile bullets.
 
 The next goal is to turn the stored profile and parsed job description into a complete,
 grounded, space-constrained tailored resume.
+
+## Product Flow
+
+1. **Authenticate** — register or log in with a server-side session.
+2. **Build shared user data** — choose resume parsing/import or manual profile entry. The resulting
+   facts and bullets belong to the user and are reusable across all future sessions.
+3. **Create a resume session** — paste or upload a target JD. Each JD creates an independent
+   workspace that can be revisited later.
+4. **Build the session resume** — upload the resume for that target, review tailored content, and
+   generate/export the result without changing the shared profile or other sessions.
 
 ## Product Features
 
@@ -62,7 +75,8 @@ grounded, space-constrained tailored resume.
 
 ### Resume Workspace and Export
 
-- Provide an interactive tailoring workspace.
+- Provide an interactive workspace per user/JD session.
+- Keep session-specific resume imports separate from shared user profile facts.
 - Let users toggle bullets and reorder sections.
 - Show live page and line-budget usage.
 - Preview the final resume.
@@ -77,11 +91,13 @@ flowchart TD
     API --> AUTH[Authentication and Authorization]
     API --> PROFILE[Profile Service]
     API --> JD[JD Processing Service]
+    API --> WORKSPACE[Resume Session Service]
     API --> TAILOR[Tailoring Orchestrator]
     API --> EXPORT[Export Service]
 
     PROFILE --> DB[(PostgreSQL)]
     JD --> DB
+    WORKSPACE --> DB
     TAILOR --> DB
     EXPORT --> DB
 
@@ -155,6 +171,9 @@ erDiagram
     USERS ||--o{ BULLETS : owns
     USERS ||--o{ JOB_DESCRIPTIONS : owns
     USERS ||--o{ RESUME_IMPORTS : creates
+    USERS ||--o{ RESUME_WORKSPACES : creates
+    RESUME_WORKSPACES ||--o| JOB_DESCRIPTIONS : targets
+    RESUME_WORKSPACES ||--o{ RESUME_IMPORTS : contains
     USERS ||--o{ TAILORED_RESUMES : creates
     SOURCE_FACTS ||--o{ BULLETS : normalizes
     RESUME_IMPORTS ||--o{ SOURCE_FACTS : produces
@@ -171,6 +190,7 @@ erDiagram
     RESUME_IMPORTS {
         uuid id PK
         uuid user_id FK
+        uuid workspace_id FK
         string filename
         string file_type
         string status
@@ -196,11 +216,18 @@ erDiagram
     JOB_DESCRIPTIONS {
         uuid id PK
         uuid user_id FK
+        uuid workspace_id FK
         text raw_text
         string_array skills
         string_array keywords
         string seniority
         string role_type
+        datetime created_at
+    }
+    RESUME_WORKSPACES {
+        uuid id PK
+        uuid user_id FK
+        string name
         datetime created_at
     }
     TAILORED_RESUMES {
@@ -235,6 +262,9 @@ sequenceDiagram
     participant AI as AI Provider
     participant Solver as Allocation Engine
 
+    User->>UI: Open a resume session
+    UI->>API: GET /api/workspaces
+    API-->>UI: User-owned resume sessions
     User->>UI: Select JD and page target
     UI->>API: POST /api/tailor/generate
     API->>DB: Load JD and owned bullets
@@ -294,6 +324,17 @@ gantt
 - Extract PDF/DOCX text without logging uploaded content.
 - Parse extracted text into reviewable source facts.
 - Make import deletion remove dependent facts and bullets.
+- Support shared profile imports during onboarding and workspace-scoped imports during a resume
+  session.
+
+### Phase 1A: Profile-First Onboarding and Sessions
+
+- Show profile acquisition immediately after login/register.
+- Offer manual entry and PDF/DOCX parsing as equivalent profile-building options.
+- Add `resume_workspaces` with owner-scoped list/detail APIs.
+- Create a workspace when a new JD session starts.
+- Associate one target JD and session resume imports with the workspace.
+- Preserve shared user bullets as reusable input for every workspace.
 
 ### Phase 2: Tailoring Scoring
 
@@ -337,6 +378,10 @@ gantt
 | `POST /api/profile/import` | Upload and parse a PDF/DOCX resume |
 | `GET /api/profile/imports` | List the user's imports |
 | `DELETE /api/profile/imports/{id}` | Delete an import and derived facts |
+| `GET /api/workspaces` | List the user's resume sessions |
+| `GET /api/workspaces/{id}` | Retrieve one resume session and its JD |
+| `POST /api/job-descriptions` | Create a JD and a new resume session |
+| `GET /api/profile/imports?workspace_id={id}` | List imports for one resume session |
 | `POST /api/tailor/score` | Score profile bullets against a JD |
 | `POST /api/tailor/generate` | Allocate and generate a tailored resume |
 | `GET /api/tailor/{id}` | Retrieve a tailored resume version |

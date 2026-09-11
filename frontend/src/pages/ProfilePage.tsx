@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError, apiFetch, SECTIONS, type Bullet, type Section, type ResumeImport, type ResumeImportDetail } from "../api/client";
 
-export function ProfilePage() {
+export function ProfilePage({ workspaceId, onComplete }: { workspaceId?: string; onComplete?: () => void }) {
   const { session } = useAuth();
   const [bullets, setBullets] = useState<Bullet[]>([]);
   const [section, setSection] = useState<Section>(SECTIONS[0]);
@@ -20,14 +20,14 @@ export function ProfilePage() {
   }
 
   async function refreshImports() {
-    const result = await apiFetch<ResumeImport[]>("/api/profile/imports");
+    const result = await apiFetch<ResumeImport[]>(workspaceId ? `/api/profile/imports?workspace_id=${workspaceId}` : "/api/profile/imports");
     setImports(result);
   }
 
   useEffect(() => {
     void refresh();
     void refreshImports();
-  }, []);
+  }, [workspaceId]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -97,7 +97,7 @@ export function ProfilePage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      await apiFetch<ResumeImportDetail>("/api/profile/import", {
+       await apiFetch<ResumeImportDetail>(workspaceId ? `/api/profile/import?workspace_id=${workspaceId}` : "/api/profile/import", {
         method: "POST",
         body: formData,
         csrfToken: session?.csrf_token,
@@ -131,7 +131,8 @@ export function ProfilePage() {
 
   return (
     <div>
-      <h2>Profile facts</h2>
+       <h2>{workspaceId ? "Session resume" : "Profile facts"}</h2>
+       {!workspaceId && <p>Step 1: build your shared user data. It will be reused across every resume session.</p>}
       <form onSubmit={handleSubmit}>
         <label htmlFor="section">Section</label>
         <select
@@ -177,6 +178,7 @@ export function ProfilePage() {
           {uploadError && <p id="upload-error" role="alert" style={{ color: "red" }}>{uploadError}</p>}
         </form>
       </div>
+      {!workspaceId && onComplete && <button type="button" onClick={onComplete}>Continue to resume sessions</button>}
 
       <div style={{ marginTop: "2rem" }}>
         <h3>Resume imports</h3>

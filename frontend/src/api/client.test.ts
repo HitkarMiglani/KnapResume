@@ -28,6 +28,21 @@ describe("apiFetch", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it.each(["/api/auth/login", "/api/auth/register"])(
+    "allows unauthenticated auth bootstrap request %s without a CSRF token",
+    async (path) => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ ok: true }), { status: 200 }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      await apiFetch(path, { method: "POST", body: {} });
+
+      const [, init] = fetchMock.mock.calls[0];
+      expect(init.headers["X-CSRF-Token"]).toBeUndefined();
+    },
+  );
+
   it("sends the CSRF header for state-changing requests", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
